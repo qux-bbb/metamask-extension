@@ -620,6 +620,10 @@ export function getNeverShowSwitchedNetworkMessage(state) {
   return state.appState.switchedNetworkNeverShowMessage;
 }
 
+export function getSwitchedNetworkDetails(state) {
+  return state.appState.switchedNetworkDetails;
+}
+
 export function getAppIsLoading(state) {
   return state.appState.isLoading;
 }

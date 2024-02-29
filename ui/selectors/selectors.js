@@ -1637,6 +1637,10 @@ export function getRemoveNftMessage(state) {
   return state.appState.removeNftMessage;
 }
 
+export function getDappPermissionModal(state) {
+  return state.appState.dappPermissionModal;
+}
+
 /**
  * To retrieve the name of the new Network added using add network form
  *

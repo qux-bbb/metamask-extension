@@ -620,7 +620,6 @@ export function getNeverShowSwitchedNetworkMessage(state) {
 }
 
 export function getSwitchedNetworkDetails(state) {
-  console.log('getSwitchedNetworkDetails; appState is: ', state.appState);
   return state.metamask.switchedNetworkDetails;
 }
 
@@ -1127,7 +1126,6 @@ export function getShowWhatsNewPopup(state) {
 }
 
 export function getCurrentPopupId(state) {
-  console.log('App state is: ', state.appState);
   return state.appState.currentPopupId;
 }
 

@@ -23,6 +23,7 @@ import {
   getSelectedInternalAccount,
   getUnapprovedTransactions,
   getAutomaticSwitchNetwork,
+  getUseRequestQueue,
 } from './selectors';
 import { ALERT_STATE } from './ducks/alerts';
 import {
@@ -210,6 +211,18 @@ async function startApp(metamaskState, backgroundConnection, opts) {
       store.dispatch(actions.setFeatureFlag(key, value));
     },
   };
+
+  // Register this window as the current popup
+  // and set in background state
+  if (
+    process.env.MULTICHAIN &&
+    getUseRequestQueue(state) &&
+    getEnvironmentType() === ENVIRONMENT_TYPE_POPUP
+  ) {
+    const thisPopupId = Date.now();
+    global.metamask.id = thisPopupId;
+    actions.setCurrentExtensionPopupId(thisPopupId);
+  }
 
   // start app
   render(<Root store={store} />, opts.container);

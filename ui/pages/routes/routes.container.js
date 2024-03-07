@@ -23,6 +23,7 @@ import {
   getNeverShowSwitchedNetworkMessage,
   getAutomaticSwitchNetwork,
   getNumberOfAllUnapprovedTransactions,
+  getUseRequestQueue,
 } from '../../selectors';
 import {
   lockMetamask,
@@ -114,6 +115,9 @@ function mapStateToProps(state) {
     unapprovedTransactions: getNumberOfAllUnapprovedTransactions(state),
     allNetworks: getAllNetworks(state),
     neverShowSwitchedNetworkMessage: getNeverShowSwitchedNetworkMessage(state),
+    currentExtensionPopupId: state.metamask.currentExtensionPopupId,
+    useRequestQueue: getUseRequestQueue(state),
+
     ///: BEGIN:ONLY_INCLUDE_IF(keyring-snaps)
     isShowKeyringSnapRemovalResultModal:
       state.appState.showKeyringRemovalSnapModal,

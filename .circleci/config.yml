@@ -1572,4 +1572,4 @@ jobs:
     steps:
       - run:
           name: All Tests Passed
-          command: echo 'weew - everything passed!'
+          command: echo 'whew - everything passed!'

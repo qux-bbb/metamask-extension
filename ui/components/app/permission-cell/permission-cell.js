@@ -39,6 +39,7 @@ const PermissionCell = ({
   revoked,
   showOptions,
   hideStatus,
+  disableInfoSection,
 }) => {
   const t = useI18nContext();
 
@@ -123,29 +124,31 @@ const PermissionCell = ({
           </Text>
         )}
       </Box>
-      <Box display={Display.Flex}>
-        {showOptions && snapId ? (
-          <PermissionCellOptions
-            snapId={snapId}
-            permissionName={permissionName}
-            description={description}
-          />
-        ) : (
-          <Tooltip
-            html={
-              <Text
-                variant={TextVariant.bodySm}
-                color={TextColor.textAlternative}
-              >
-                {description}
-              </Text>
-            }
-            position="bottom"
-          >
-            <Icon color={infoIconColor} name={infoIcon} size={IconSize.Sm} />
-          </Tooltip>
-        )}
-      </Box>
+      {disableInfoSection ? null : (
+        <Box display={Display.Flex}>
+          {showOptions && snapId ? (
+            <PermissionCellOptions
+              snapId={snapId}
+              permissionName={permissionName}
+              description={description}
+            />
+          ) : (
+            <Tooltip
+              html={
+                <Text
+                  variant={TextVariant.bodySm}
+                  color={TextColor.textAlternative}
+                >
+                  {description}
+                </Text>
+              }
+              position="bottom"
+            >
+              <Icon color={infoIconColor} name={infoIcon} size={IconSize.Sm} />
+            </Tooltip>
+          )}
+        </Box>
+      )}
     </Box>
   );
 };
@@ -165,6 +168,7 @@ PermissionCell.propTypes = {
   revoked: PropTypes.bool,
   showOptions: PropTypes.bool,
   hideStatus: PropTypes.bool,
+  disableInfoSection: PropTypes.bool,
 };
 
 export default PermissionCell;

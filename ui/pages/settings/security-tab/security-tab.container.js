@@ -10,6 +10,7 @@ import {
   setUseMultiAccountBalanceChecker,
   setUsePhishDetect,
   setUseTokenDetection,
+  setDisableExternalServices,
   setUseAddressBarEnsResolution,
   setOpenSeaEnabled,
   setUseNftDetection,
@@ -52,6 +53,7 @@ const mapStateToProps = (state) => {
     openSeaEnabled,
     useNftDetection,
     use4ByteResolution,
+    disableExternalServices,
     useExternalNameSources,
   } = metamask;
 
@@ -73,6 +75,7 @@ const mapStateToProps = (state) => {
     useNftDetection,
     use4ByteResolution,
     useExternalNameSources,
+    disableExternalServices,
     petnamesEnabled,
     transactionSecurityCheckEnabled:
       getIsTransactionSecurityCheckEnabled(state),
@@ -109,6 +112,9 @@ const mapDispatchToProps = (dispatch) => {
     },
     setTransactionSecurityCheckEnabled: (value) =>
       dispatch(setTransactionSecurityCheckEnabled(value)),
+    setDisableExternalServices: (value) => {
+      return dispatch(setDisableExternalServices(value));
+    },
     ///: BEGIN:ONLY_INCLUDE_IF(blockaid)
     setSecurityAlertsEnabled: (value) => setSecurityAlertsEnabled(value),
     ///: END:ONLY_INCLUDE_IF

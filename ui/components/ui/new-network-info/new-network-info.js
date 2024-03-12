@@ -15,11 +15,16 @@ import {
   TextVariant,
 } from '../../../helpers/constants/design-system';
 import { IMPORT_TOKEN_ROUTE } from '../../../helpers/constants/routes';
-import { getCurrentNetwork, getUseTokenDetection } from '../../../selectors';
+import {
+  getCurrentNetwork,
+  getMetaMetricsId,
+  getUseTokenDetection,
+} from '../../../selectors';
 import { setFirstTimeUsedNetwork } from '../../../store/actions';
 import { PickerNetwork, Text, Box } from '../../component-library';
 import Button from '../button';
 import Popover from '../popover';
+import { getPortfolioUrl } from '../../../helpers/utils/portfolio';
 
 export default function NewNetworkInfo() {
   const t = useContext(I18nContext);
@@ -30,6 +35,7 @@ export default function NewNetworkInfo() {
   const autoDetectToken = useSelector(getUseTokenDetection);
   const providerConfig = useSelector(getProviderConfig);
   const currentNetwork = useSelector(getCurrentNetwork);
+  const metaMetricsId = useSelector(getMetaMetricsId);
 
   const onCloseClick = () => {
     setShowPopup(false);
@@ -158,21 +164,42 @@ export default function NewNetworkInfo() {
                 display={Display.InlineBlock}
                 className="new-network-info__bullet-paragraph__text"
               >
-                {t('attemptSendingAssets')}{' '}
-                <a
-                  href="https://metamask.zendesk.com/hc/en-us/articles/4404424659995"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Text
-                    variant={TextVariant.bodySm}
-                    as="h6"
-                    color={Color.infoDefault}
-                    display={Display.InlineBlock}
+                {t('attemptSendingAssets', [
+                  <a
+                    href={`${getPortfolioUrl(
+                      'bridge',
+                      'ext_bridge_new_network_info_link',
+                      metaMetricsId,
+                    )}&destChain=${currentNetwork?.chainId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    key="bridge-link"
                   >
-                    {t('learnMoreUpperCase')}
-                  </Text>
-                </a>
+                    <Text
+                      variant={TextVariant.bodySm}
+                      as="h6"
+                      color={Color.infoDefault}
+                      className="new-network-info__button"
+                    >
+                      {t('metamaskPortfolio')}
+                    </Text>
+                  </a>,
+                  <a
+                    href="https://metamask.zendesk.com/hc/en-us/articles/4404424659995"
+                    target="_blank"
+                    rel="noreferrer"
+                    key="learn-more-link"
+                  >
+                    <Text
+                      variant={TextVariant.bodySm}
+                      as="h6"
+                      color={Color.infoDefault}
+                      display={Display.InlineBlock}
+                    >
+                      {t('learnMoreUpperCase')}
+                    </Text>
+                  </a>,
+                ])}
               </Text>
             </Box>
             {!autoDetectToken || !tokenDetectionSupported ? (

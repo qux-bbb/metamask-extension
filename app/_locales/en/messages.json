@@ -472,7 +472,7 @@
     "message": "Asset options"
   },
   "attemptSendingAssets": {
-    "message": "If you attempt to send assets directly from one network to another, this may result in permanent asset loss. Make sure to use a bridge."
+    "message": "Pro tip: Don’t try to send assets from one network to another, since this can cause you to lose your assets forever. Use $1 to bridge them instead! $2"
   },
   "attemptToCancelSwapForFree": {
     "message": "Attempt to cancel swap for free"
@@ -2506,6 +2506,9 @@
   "metamaskInstitutionalVersion": {
     "message": "MetaMask Institutional Version"
   },
+  "metamaskPortfolio": {
+    "message": "MetaMask Portfolio"
+  },
   "metamaskSwapsOfflineDescription": {
     "message": "MetaMask Swaps is undergoing maintenance. Please check back later."
   },
@@ -2626,7 +2629,7 @@
     "description": "Placeholder text for name input field in name component modal."
   },
   "nativeToken": {
-    "message": "The native token on this network is $1. It is the token used for gas fees.",
+    "message": "$1 is the token used for gas fees on this network.",
     "description": "$1 represents the name of the native token on the current network"
   },
   "nativeTokenScamWarningConversion": {
@@ -5186,7 +5189,7 @@
     "message": "Switch to this account"
   },
   "switchedTo": {
-    "message": "You have switched to"
+    "message": "You're now on"
   },
   "switcherTitle": {
     "message": "Network switcher"

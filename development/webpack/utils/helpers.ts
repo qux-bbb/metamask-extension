@@ -57,39 +57,6 @@ export const getMetaMaskVersion = (): string => {
   );
 };
 
-export type ManifestOptions = {
-  browser: Browser;
-  version: string;
-  description: string | null;
-};
-
-type ManifestTypeForVersion<T extends Manifest> =
-  T['manifest_version'] extends 2 ? ManifestV2 : ManifestV3;
-
-export const generateManifest = (
-  baseManifest: Manifest,
-  options: ManifestOptions,
-): ManifestTypeForVersion<typeof baseManifest> => {
-  const { version, description, browser } = options;
-
-  const browserManifestOverrides: Partial<Manifest> = require(join(
-    __dirname,
-    `../../../app/manifest/v${baseManifest.manifest_version}/${browser}.json`,
-  ));
-
-  const overrides = {
-    version,
-    description: description ? `${baseManifest.description} – ${description}` : baseManifest.description,
-  };
-
-  return merge(
-    {},
-    baseManifest,
-    browserManifestOverrides,
-    overrides,
-  ) as ManifestTypeForVersion<typeof baseManifest>;
-};
-
 /**
  * Collects all entry files for use with webpack.
  *

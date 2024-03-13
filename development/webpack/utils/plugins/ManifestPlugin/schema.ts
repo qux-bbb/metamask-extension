@@ -6,19 +6,35 @@ type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 export const schema: JSONSchema7 = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',
-  required: ['browsers', 'zip'],
+  required: ['browsers', 'description', 'manifest_version', 'version', 'zip'],
   properties: {
     browsers: {
+      description: 'The browsers to build for.',
       type: 'array',
       items: {
         type: 'string',
-        enum: Browsers as Writeable<typeof Browsers>, // this is an array of strings
+        enum: Browsers as Writeable<typeof Browsers>,
       },
       minItems: 1,
       maxItems: Browsers.length,
       uniqueItems: true,
     },
+    version: {
+      description: 'One to four dot-separated integers identifying the version of this extension.',
+      type: 'string',
+    },
+    description: {
+      description: 'A plain text string that describes the extension.',
+      type: ['string', 'null'],
+      maxLength: 132,
+    },
+    manifest_version: {
+      description: 'An integer specifying the version of the manifest file format your package requires.',
+      type: 'number',
+      enum: [2, 3],
+    },
     zip: {
+      description: 'Whether or not to zip the individual browser builds.',
       type: 'boolean',
     },
     zipOptions: {

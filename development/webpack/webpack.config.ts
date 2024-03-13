@@ -21,7 +21,6 @@ import type ReactRefreshPluginType from '@pmmmwh/react-refresh-webpack-plugin';
 import { SelfInjectPlugin } from './utils/plugins/SelfInjectPlugin';
 import {
   type Manifest,
-  generateManifest,
   collectEntries,
   getLastCommitTimestamp,
   getLastCommitHash,
@@ -90,23 +89,31 @@ const cache = args.cache
 
 // #region plugins
 const plugins: WebpackPluginInstance[] = [
-  new ManifestPlugin({
-    browsers: args.browser,
-    zip: args.zip,
-    zipOptions: {
-      outFilePath: '../../builds/[browser].zip', // relative to output.path
-      mtime: getLastCommitTimestamp(),
-      excludeExtensions: ['.map'],
-      // `level: 9` is the highest; it may increase build time by ~5% over level 1
-      level: 9,
-    },
-  }),
   new SelfInjectPlugin({ test: /^scripts\/inpage\.js$/u }),
   // HtmlBundlerPlugin treats HTML files as entry points
   new HtmlBundlerPlugin({
     preprocessorOptions: { useWith: false },
     minify: args.minify,
     integrity: 'auto',
+  }),
+  new ManifestPlugin({
+    manifest_version: MANIFEST_VERSION,
+    description: isDevelopment
+    ? `${args.env} build from git id: ${getLastCommitHash().substring(
+        0,
+        8,
+      )}`
+    : null,
+    version: variables.get('METAMASK_VERSION') as string,
+    browsers: args.browser,
+    zip: args.zip,
+    zipOptions: {
+      outFilePath: `../../builds/metamask-[browser]-${variables.get("METAMASK_VERSION")}.zip`, // relative to output.path
+      mtime: getLastCommitTimestamp(),
+      excludeExtensions: ['.map'],
+      // `level: 9` is the highest; it may increase build time by ~5% over level 1
+      level: 9,
+    },
   }),
   // use ProvidePlugin to polyfill *global* node variables
   new ProvidePlugin({
@@ -121,46 +128,6 @@ const plugins: WebpackPluginInstance[] = [
       // misc images
       // TODO: fix overlap between this folder and automatically bundled assets
       { from: join(context, 'images'), to: 'images' },
-      // generate manifest
-      // TODO: do this better, it's gross.
-      {
-        from: join(context, `manifest/v${MANIFEST_VERSION}/_base.json`),
-        to: 'manifest.json',
-        transform: (bytes: Buffer, _path: string) => {
-          const baseManifest: Manifest = JSON.parse(bytes.toString('utf8'));
-          const browserManifest = generateManifest(baseManifest, {
-            browser: args.browser[0],
-            description: isDevelopment
-              ? `${args.env} build from git id: ${getLastCommitHash().substring(
-                  0,
-                  8,
-                )}`
-              : null,
-            version: variables.get('METAMASK_VERSION') as string,
-          });
-
-          if (args.devtool === 'source-map') {
-            // TODO: merge with anything that might already be in web_accessible_resources
-            if (MANIFEST_VERSION === 3) {
-              browserManifest.web_accessible_resources = [
-                {
-                  resources: [
-                    'scripts/inpage.js.map',
-                    'scripts/contentscript.js.map',
-                  ],
-                  matches: ['<all_urls>'],
-                },
-              ] as any;
-            } else {
-              browserManifest.web_accessible_resources = [
-                'scripts/inpage.js.map',
-                'scripts/contentscript.js.map',
-              ] as any;
-            }
-          }
-          return JSON.stringify(browserManifest, null, args.minify ? 0 : 2);
-        },
-      },
     ],
   }),
 ];

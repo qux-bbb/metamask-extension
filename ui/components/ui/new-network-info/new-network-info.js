@@ -15,7 +15,11 @@ import {
   TextVariant,
 } from '../../../helpers/constants/design-system';
 import { IMPORT_TOKEN_ROUTE } from '../../../helpers/constants/routes';
-import { getCurrentNetwork, getUseTokenDetection } from '../../../selectors';
+import {
+  getCurrentNetwork,
+  getUseTokenDetection,
+  getDisableExternalServices,
+} from '../../../selectors';
 import { setFirstTimeUsedNetwork } from '../../../store/actions';
 import { PickerNetwork, Text, Box } from '../../component-library';
 import Button from '../button';
@@ -28,6 +32,7 @@ export default function NewNetworkInfo() {
   const [showPopup, setShowPopup] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const autoDetectToken = useSelector(getUseTokenDetection);
+  const areExternalServicesDisabled = useSelector(getDisableExternalServices);
   const providerConfig = useSelector(getProviderConfig);
   const currentNetwork = useSelector(getCurrentNetwork);
 
@@ -54,6 +59,9 @@ export default function NewNetworkInfo() {
   }, [providerConfig.chainId]);
 
   useEffect(() => {
+    if (areExternalServicesDisabled) {
+      return;
+    }
     checkTokenDetection();
     // we want to only fetch once
     // eslint-disable-next-line react-hooks/exhaustive-deps

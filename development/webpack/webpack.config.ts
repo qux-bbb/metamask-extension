@@ -33,6 +33,7 @@ import { parseArgv, getDryRunMessage } from './utils/cli';
 import { getCodeFenceLoader } from './utils/loaders/codeFenceLoader';
 import { getSwcLoader } from './utils/loaders/swcLoader';
 import { getBuildTypes, getVariables } from './utils/config';
+import { ManifestPlugin } from './utils/plugins/ManifestPlugin';
 
 const buildTypes = getBuildTypes();
 const { args, cacheKey, features } = parseArgv(argv.slice(2), buildTypes);
@@ -44,10 +45,6 @@ if (args['dry-run']) {
 // #region temporary short circuit for unsupported build configurations
 if (args.lavamoat)
   throw new Error("The webpack build doesn't support LavaMoat yet. So sorry.");
-if (args.browser.length > 1)
-  throw new Error(
-    `The webpack build doesn't support multiple browsers yet. So sorry.`,
-  );
 // #endregion temporary short circuit for unsupported build configurations
 
 const context = join(__dirname, '../../app');
@@ -93,6 +90,17 @@ const cache = args.cache
 
 // #region plugins
 const plugins: WebpackPluginInstance[] = [
+  new ManifestPlugin({
+    browsers: args.browser,
+    zip: args.zip,
+    zipOptions: {
+      outFilePath: '../../builds/[browser].zip', // relative to output.path
+      mtime: getLastCommitTimestamp(),
+      excludeExtensions: ['.map'],
+      // `level: 9` is the highest; it may increase build time by ~5% over level 1
+      level: 9,
+    },
+  }),
   new SelfInjectPlugin({ test: /^scripts\/inpage\.js$/u }),
   // HtmlBundlerPlugin treats HTML files as entry points
   new HtmlBundlerPlugin({
@@ -165,17 +173,6 @@ if (args.progress) {
   const { ProgressPlugin } = require('webpack');
   plugins.push(new ProgressPlugin());
 }
-if (args.zip) {
-  const { ZipPlugin } = require('./utils/plugins/ZipPlugin');
-  const options = {
-    outFilePath: '../../../builds/metamask.zip',
-    mtime: getLastCommitTimestamp(),
-    excludeExtensions: ['.map'],
-    // `level: 9` is the highest; it may increase build time by ~5% over level 1
-    level: 9,
-  };
-  plugins.push(new ZipPlugin(options));
-}
 // #endregion plugins
 
 const swcConfig = { args, safeVariables, browsersListQuery, isDevelopment };
@@ -203,7 +200,7 @@ const config = {
     crossOriginLoading: 'anonymous',
     // filenames for *initial* files (essentially JS entry points)
     filename: '[name].[contenthash].js',
-    path: join(__dirname, `../../dist/webpack/${args.browser[0]}`),
+    path: join(__dirname, `../../dist/webpack`),
     // Clean the output directory before emit, so that only the latest build
     // files remain. Nearly 0 performance penalty for this clean up step.
     clean: true,

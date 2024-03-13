@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { extname } from 'node:path';
 import { sources, Compilation, type Compiler } from 'webpack';
 import { validate } from 'schema-utils';
 import {
@@ -103,7 +103,7 @@ export class ZipPlugin {
           return;
         }
 
-        const extName = path.extname(assetName);
+        const extName = extname(assetName);
         if (this.options.excludeExtensions.includes(extName)) {
           continue;
         }

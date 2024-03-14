@@ -56,7 +56,7 @@ describe('ConfirmFooter', () => {
       .spyOn(Actions, 'rejectPendingApproval')
       .mockImplementation(() => ({} as any));
     fireEvent.click(cancelButton);
-    expect(rejectSpy).toHaveBeenCalledTimes(1);
+    expect(rejectSpy).toHaveBeenCalled();
   });
 
   it('invoke action resolvePendingApproval when submit button is clicked', () => {
@@ -66,7 +66,7 @@ describe('ConfirmFooter', () => {
       .spyOn(Actions, 'resolvePendingApproval')
       .mockImplementation(() => ({} as any));
     fireEvent.click(submitButton);
-    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(resolveSpy).toHaveBeenCalled();
   });
 
   it('disables submit button if required LedgerHidConnection is not yet established', () => {

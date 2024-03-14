@@ -9,7 +9,7 @@ import {
 } from '../../../../../components/component-library';
 import { Footer as PageFooter } from '../../../../../components/multichain/pages/page';
 import { useI18nContext } from '../../../../../hooks/useI18nContext';
-import { useMMIConfirmationInfo } from '../../../../../hooks/useMMIConfirmations';
+import { useMMIConfirmations } from '../../../../../hooks/useMMIConfirmations';
 import { doesAddressRequireLedgerHidConnection } from '../../../../../selectors';
 import {
   rejectPendingApproval,
@@ -21,7 +21,7 @@ const Footer = () => {
   const t = useI18nContext();
   const currentConfirmation = useSelector(currentConfirmationSelector);
   ///: BEGIN:ONLY_INCLUDE_IF(build-mmi)
-  const { mmiOnSignCallback, mmiSubmitDisabled } = useMMIConfirmationInfo();
+  const { mmiOnSignCallback, mmiSubmitDisabled } = useMMIConfirmations();
   ///: END:ONLY_INCLUDE_IF
 
   let from: string | undefined;

@@ -670,7 +670,7 @@ const state = {
       [CHAIN_IDS.OPTIMISM_TESTNET]: false,
       [CHAIN_IDS.AVALANCHE_TESTNET]: true,
     },
-    firstTimeFlowType: 'create',
+    firstTimeFlowType: FirstTimeFlowType.create,
     completedOnboarding: true,
     knownMethodData: {
       '0x60806040': {

@@ -78,8 +78,8 @@ import {
 import ZENDESK_URLS from '../../helpers/constants/zendesk-url';
 ///: BEGIN:ONLY_INCLUDE_IF(build-main)
 import { SUPPORT_LINK } from '../../../shared/lib/ui-utils';
-///: END:ONLY_INCLUDE_IF
 import { FirstTimeFlowType } from '../../../shared/constants/onboarding';
+///: END:ONLY_INCLUDE_IF
 ///: BEGIN:ONLY_INCLUDE_IF(build-beta)
 import BetaHomeFooter from './beta/beta-home-footer.component';
 ///: END:ONLY_INCLUDE_IF

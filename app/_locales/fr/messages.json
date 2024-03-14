@@ -3273,10 +3273,6 @@
   "securityAndPrivacy": {
     "message": "Sécurité et confidentialité"
   },
-  "securityProviderPoweredBy": {
-    "message": "Service fourni par $1",
-    "description": "The security provider that is providing data"
-  },
   "seeDetails": {
     "message": "Voir les détails"
   },

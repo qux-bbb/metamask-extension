@@ -3,9 +3,17 @@ import log from 'loglevel';
 import { FirstTimeFlowType } from '../../../shared/constants/onboarding';
 
 /**
- * @typedef {object} InitState
- * @property {boolean} seedPhraseBackedUp Indicates whether the user has completed the seed phrase backup challenge
- * @property {boolean} completedOnboarding Indicates whether the user has completed the onboarding flow
+ * The Onboarding Controller State Object
+ *
+ * @property seedPhraseBackedUp - Indicates whether the user has completed
+ * the seed phrase backup challenge
+ * @property firsTimeFlowType - Indicates which method the user chose during
+ * onboarding to instantiate their account. Either create a new SRP or import
+ * via one.
+ * @property completedOnboarding - Indicates whether the user has completed the
+ * onboarding flow
+ * @property onboardingTabs - A record of the tabs that have initiated
+ * onboarding
  */
 export type OnboardingControllerState = {
   seedPhraseBackedUp: boolean | null;
@@ -15,20 +23,17 @@ export type OnboardingControllerState = {
 };
 
 /**
- * @typedef {object} OnboardingOptions
- * @property {InitState} initState The initial controller state
- */
-
-/**
  * Controller responsible for maintaining
  * state related to onboarding
  */
 export default class OnboardingController {
   store: ObservableStore<OnboardingControllerState>;
+
   /**
-   * Creates a new controller instance
+   * Creates an instance of the OnboardingController
    *
-   * @param {OnboardingOptions} [opts] - Controller configuration parameters
+   * @param opts - The options for the controller
+   * @param opts.initState - The initial state of the controller
    */
   constructor(opts: { initState?: OnboardingControllerState } = {}) {
     const initialTransientState = {
@@ -50,10 +55,10 @@ export default class OnboardingController {
     });
   }
 
-  // /**
-  //  * Sets the completedOnboarding state to true, indicating that the user has completed the
-  //  * onboarding process.
-  //  */
+  /**
+   * Sets the completedOnboarding state to true, indicating that the user has
+   * completed the onboarding process.
+   */
   async completeOnboarding() {
     this.store.updateState({
       completedOnboarding: true,
@@ -64,7 +69,7 @@ export default class OnboardingController {
   /**
    * Setter for the `firstTimeFlowType` property
    *
-   * @param {string} type - Indicates the type of first time flow - create or import - the user wishes to follow
+   * @param type - The new value for the `firstTimeFlowType` property
    */
   setFirstTimeFlowType(type: FirstTimeFlowType) {
     this.store.updateState({ firstTimeFlowType: type });
@@ -73,8 +78,8 @@ export default class OnboardingController {
   /**
    * Registering a site as having initiated onboarding
    *
-   * @param {string} location - The location of the site registering
-   * @param {string} tabId - The id of the tab registering
+   * @param location - The location of the site registering
+   * @param tabId - The id of the tab registering
    */
   registerOnboarding = async (location: string, tabId: string) => {
     if (this.store.getState().completedOnboarding) {

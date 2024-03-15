@@ -529,7 +529,7 @@ function createFactoredBuild({
       buildName: getBuildName({
         environment,
         buildType,
-      })
+      }),
     });
     const features = {
       active: new Set(activeBuild.features ?? []),
@@ -798,7 +798,7 @@ function createNormalBundle({
       buildName: getBuildName({
         environment,
         buildType,
-      })
+      }),
     });
     Object.entries(extraEnvironmentVariables ?? {}).forEach(([key, value]) =>
       variables.set(key, value),

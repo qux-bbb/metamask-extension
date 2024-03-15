@@ -21,7 +21,7 @@ export function build(onComplete: () => void = noop) {
     // DISABLED BECAUSE WE AREN'T `__HMR_READY__` YET
     // Use `webpack-dev-server` to enable HMR
     const WebpackDevServer: typeof WebpackDevServerType = require('webpack-dev-server');
-    const options = {
+    const serverOptions = {
       hot: isDevelopment,
       liveReload: isDevelopment,
       server: {
@@ -39,8 +39,8 @@ export function build(onComplete: () => void = noop) {
       allowedHosts: 'all',
     } as const satisfies WebpackDevServerType.Configuration;
 
-    const server = new WebpackDevServer(options, compiler);
-    server.start().then(() => console.log('🦊 Watching for changes…'))
+    const server = new WebpackDevServer(serverOptions, compiler);
+    server.start().then(() => console.log('🦊 Watching for changes…'));
   } else {
     console.error(`🦊 Running ${options.mode} build…`);
     if (watch) {

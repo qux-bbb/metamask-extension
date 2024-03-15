@@ -9,7 +9,7 @@ import { getMetaMaskVersion } from './helpers';
 const BUILDS_YML_PATH = join(__dirname, '../../../builds.yml');
 
 /**
- * @params rcFilePath - The path to the rc file.
+ * @param rcFilePath - The path to the rc file.
  * @returns The definitions loaded from the rc file.
  */
 function loadEnv(rcFilePath: string): Map<string, unknown> {
@@ -21,24 +21,32 @@ function loadEnv(rcFilePath: string): Map<string, unknown> {
 
 /**
  *
- * @param buildType
+ * @param args
+ * @param args.type
+ * @param args.env
+ * @param buildTypesConfig
  * @returns
  */
 export function getVariables({ type, env }: Args, buildTypesConfig: Build) {
   const variables = loadConfigVars(type, buildTypesConfig);
   const version = getMetaMaskVersion();
+
+  function set(key: string, value: unknown): void;
+  function set(key: Record<string, unknown>): void;
+  function set(key: string | Record<string, unknown>, value?: unknown): void {
+    if (typeof key === 'object') {
+      Object.entries(key).forEach(([k, v]) => variables.set(k, v));
+    } else {
+      variables.set(key, value);
+    }
+  }
+
   setEnvironmentVariables({
     buildType: type,
     version: type === 'main' ? `${version}` : `${version}-${type}.0`,
     environment: env,
     variables: {
-      set(key: string | Record<string, unknown>, value?: unknown): void {
-        if (typeof key === 'object') {
-          Object.entries(key).forEach(([k, v]) => variables.set(k, v));
-        } else {
-          variables.set(key, value!);
-        }
-      },
+      set,
       isDefined(key: string): boolean {
         return variables.has(key);
       },
@@ -98,6 +106,9 @@ export function getBuildTypes(): Build {
  *
  * @param type
  * @param build
+ * @param build.env
+ * @param build.buildTypes
+ * @param build.features
  * @returns
  */
 function loadConfigVars(type: string, { env, buildTypes, features }: Build) {

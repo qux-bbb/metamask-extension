@@ -7,6 +7,11 @@ export type BaseManifestPluginOptions<Zip extends boolean> = {
   browsers: [Browser, ...Browser[]];
 
   /**
+   * An array of strings specifying the paths of additional web-accessible resources.
+   */
+  web_accessible_resources?: string[];
+
+  /**
    * An integer specifying the version of the manifest file format your package requires
    */
   manifest_version: 2 | 3;
@@ -72,4 +77,4 @@ export type ZipOptions = {
 };
 
 export type ManifestPluginOptions<Zip extends boolean> =
-  BaseManifestPluginOptions<Zip> & Zip extends true ? ZipOptions : {};
+  BaseManifestPluginOptions<Zip> & (Zip extends true ? ZipOptions : object);

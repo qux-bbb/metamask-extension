@@ -66,6 +66,8 @@ export type Features = ReturnType<typeof parseArgv>['features'];
  * executable and file name. Typically used as
  * `parseArgv(process.argv.slice(2))`.
  * @param buildConfig - The build config.
+ * @param buildConfig.buildTypes - The build types.
+ * @param buildConfig.features - The features.
  * @returns An object representing the parsed arguments.
  */
 export function parseArgv(argv: string[], { buildTypes, features }: Build) {

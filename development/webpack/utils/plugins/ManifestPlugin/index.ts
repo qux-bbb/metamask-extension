@@ -1,7 +1,11 @@
-import { extname } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { sources, Compilation, type Compiler } from 'webpack';
+import { extname, join } from 'node:path';
+import {
+  sources,
+  ProgressPlugin,
+  type Compilation,
+  type Compiler,
+  type Asset,
+} from 'webpack';
 import { validate } from 'schema-utils';
 import {
   type DeflateOptions,
@@ -9,21 +13,75 @@ import {
   AsyncZipDeflate,
   ZipPassThrough,
 } from 'fflate';
+import { noop, type Manifest, type ManifestV3, Browser } from '../../helpers';
 import { schema } from './schema';
-import { ManifestPluginOptions } from './types';
-import { Manifest } from '../../helpers';
+import type { ManifestPluginOptions } from './types';
 
 const { RawSource, ConcatSource } = sources;
 
 type Assets = Compilation['assets'];
 
 const NAME = 'ManifestPlugin';
+const BROWSER_TEMPLATE_RE = /\[browser\]/gu;
 
-// TODO: it'd be great if the logic to find entry points was also in this plugin
-// instead of in helpers.ts.
+/**
+ * Returns true if the given manifest is a V3 manifest.
+ *
+ * @param manifest - The manifest to check
+ * @returns True if the manifest is a V3 manifest
+ */
+function isManifestV3(manifest: Manifest): manifest is ManifestV3 {
+  return manifest.manifest_version === 3;
+}
+
+/**
+ * Clones a Buffer or Uint8Array and returns it
+ *
+ * @param data
+ * @returns
+ */
+function clone(data: Buffer | Uint8Array): Buffer {
+  return Buffer.from(data);
+}
+
+/**
+ * Adds the given asset to the zip file
+ *
+ * @param asset - The asset to add
+ * @param assetName - The name of the asset
+ * @param compress - Whether to compress the asset
+ * @param compressionOptions - The options to use for compression
+ * @param mtime - The modification time of the asset
+ * @param zip - The zip file to add the asset to
+ */
+function addAssetToZip(
+  asset: Buffer,
+  assetName: string,
+  compress: boolean,
+  compressionOptions: DeflateOptions | undefined,
+  mtime: number,
+  zip: Zip,
+): void {
+  const zipFile = compress
+    ? new AsyncZipDeflate(assetName, compressionOptions)
+    : new ZipPassThrough(assetName);
+  zipFile.mtime = mtime;
+  zip.add(zipFile);
+  // use a copy of the Buffer, as Zip will consume it
+  zipFile.push(asset, true);
+}
+
+/**
+ * A webpack plugin that generates extension manifests for browsers and organizes
+ * assets into browser-specific directories and optionally zips them.
+ *
+ * TODO: it'd be great if the logic to find entry points was also in this plugin
+ * instead of in helpers.ts.
+ */
 export class ManifestPlugin<Z extends boolean> {
   /**
-   * File types that can be compressed well using DEFLATE compression
+   * File types that can be compressed well using DEFLATE compression, used when
+   * zipping assets.
    */
   static compressibleFileTypes = new Set([
     '.bmp',
@@ -41,14 +99,20 @@ export class ManifestPlugin<Z extends boolean> {
     '.svg',
     '.txt',
     '.wasm',
-    '.vtt',
-    // '.ttf', // disable ttf as some of them were getting corrupted when compressed
+    '.vtt', // very slow to process?
+    // ttf is disabled as some were getting corrupted during compression. You
+    // can test this by uncommenting it, running with --zip, and then unzipping
+    // the resulting zip file. If it is still broken the unzip operation will
+    // show an error.
+    // '.ttf',
     '.wav',
     '.xml',
   ]);
 
   options: ManifestPluginOptions<Z>;
-  manifests: Map<string, sources.Source> = new Map();
+
+  manifests: Map<Browser, sources.Source> = new Map();
+
   constructor(options: ManifestPluginOptions<Z>) {
     validate(schema, options, { name: NAME });
     this.options = options;
@@ -59,7 +123,7 @@ export class ManifestPlugin<Z extends boolean> {
     compiler.hooks.compilation.tap(NAME, this.hookIntoAssetPipeline.bind(this));
   }
 
-  async zipAssets(
+  private async zipAssets(
     compilation: Compilation,
     assets: Assets, // an object of asset names to assets
     options: ManifestPluginOptions<true>,
@@ -68,43 +132,54 @@ export class ManifestPlugin<Z extends boolean> {
     // browser. Can we share the compression and crc steps to save time?
     const { browsers, zipOptions } = options;
     const { excludeExtensions, level, outFilePath, mtime } = zipOptions;
-    const assetDeletions = new Set<string>(); // Track assets to delete
-
-    // Snapshot the assets to ensure a stable list during processing
-    const assetsArray = Object.entries(assets);
-
     const compressionOptions: DeflateOptions = { level };
+    const assetsArray = Object.entries(assets);
+    // we need to wait to delete assets until after we've zipped them all
+    const assetDeletions = new Set<string>();
 
-    // TODO: we can't run this is parrallel because we'll run out of memory
-    // pretty quickly.
-    let errored = false;
+    let filesProcessed = 0;
+    const numAssetsPerBrowser = assetsArray.length + 1;
+    const totalWork = numAssetsPerBrowser * browsers.length; // +1 for each browser's manifest.json
+    const reportProgress =
+      ProgressPlugin.getReporter(compilation.compiler) || noop;
+    // TODO: run this in parallel. It you try without optimizing the way we do
+    // Zipping they process will likely run out of memory
     for (const browser of browsers) {
-      await new Promise<void>((resolve, reject) => {
-        const zip = new Zip();
+      const manifest = this.manifests.get(browser) as sources.Source;
+      // since Zipping is async, an past chunk could cause an error after
+      // we've started processing additional chunks. We'll use this errored
+      // flag to short circuit the rest of the processing if that happens.
 
-        const source = new ConcatSource();
-        zip.ondata = (err, dat, final) => {
-          if (err || errored) {
+      const source = await new Promise<sources.Source>((resolve, reject) => {
+        let errored = false;
+        const zipSource = new ConcatSource();
+        const zip = new Zip((error, data, final) => {
+          if (errored) return; // ignore additional errors
+          if (error) {
+            // set error flag to prevent additional processing
             errored = true;
-            return void reject(err);
+            reject(error);
+          } else {
+            zipSource.add(new RawSource(clone(data)));
+            // we've received our final bit of data, return the zipSource
+            if (final) resolve(zipSource);
           }
-          source.add(new RawSource(Buffer.from(dat)));
+        });
 
-          if (!final) return;
-
-          const zipFilePath = outFilePath.replace(/\[browser\]/gu, browser);
-          compilation.emitAsset(zipFilePath, source, {
-            javascriptModule: false,
-            compressed: true,
-            contentType: 'application/zip',
-            development: true
-          });
-          resolve();
-        };
-
-        const manifestZipFile = new AsyncZipDeflate("manifest.json", compressionOptions)
-        zip.add(manifestZipFile);
-        manifestZipFile.push(this.manifests.get(browser)!.buffer(), true);
+        // add the browser's manifest.json file to the zip
+        addAssetToZip(
+          manifest.buffer(),
+          'manifest.json',
+          true,
+          compressionOptions,
+          mtime,
+          zip,
+        );
+        reportProgress(
+          0,
+          `${++filesProcessed}/${totalWork} assets zipped for ${browser}`,
+          'manifest.json',
+        );
 
         for (const [assetName, asset] of assetsArray) {
           if (errored) return;
@@ -114,107 +189,152 @@ export class ManifestPlugin<Z extends boolean> {
 
           assetDeletions.add(assetName);
 
-          const zipFile = ManifestPlugin.compressibleFileTypes.has(extName)
-            ? new AsyncZipDeflate(assetName, compressionOptions)
-            : new ZipPassThrough(assetName);
-          zipFile.mtime = mtime;
-          zip.add(zipFile);
-          // use a copy of the Buffer, as Zip will consume it
-          zipFile.push(Buffer.from(asset.buffer()), true);
+          addAssetToZip(
+            // make a copy of the asset Buffer as Zipping will *consume* it,
+            // which breaks things if we are compiling for multiple browsers.
+            clone(asset.buffer()),
+            assetName,
+            ManifestPlugin.compressibleFileTypes.has(extName),
+            compressionOptions,
+            mtime,
+            zip,
+          );
+          reportProgress(
+            0,
+            `${++filesProcessed}/${totalWork} assets zipped for ${browser}`,
+            assetName,
+          );
         }
 
         zip.end();
       });
+
+      // add the zip file to webpack's assets.
+      const zipFilePath = outFilePath.replace(BROWSER_TEMPLATE_RE, browser);
+      compilation.emitAsset(zipFilePath, source, {
+        javascriptModule: false,
+        compressed: true,
+        contentType: 'application/zip',
+        development: true,
+      });
     }
 
+    // delete the assets after we've zipped them all
     assetDeletions.forEach((assetName) => compilation.deleteAsset(assetName));
   }
 
-  moveAssets(
+  /**
+   * Moves the assets to the correct browser locations and adds each browser's
+   * extension manifest.json file to the list of assets.
+   *
+   * @param compilation
+   * @param assets
+   * @param options
+   */
+  private moveAssets(
     compilation: Compilation,
     assets: Assets,
     options: ManifestPluginOptions<false>,
-  ) {
-    const browsers = options.browsers;
-    for (const [name, asset] of Object.entries(assets)) {
-      // move the assets to the correct browser locations
-      browsers.forEach((browser) => {
-        compilation.emitAsset(join(browser, name), asset);
-      });
-      compilation.deleteAsset(name);
-    }
+  ): void {
+    // we need to wait to delete assets until after we've zipped them all
+    const assetDeletions = new Set<string>();
+    const { browsers } = options;
     browsers.forEach((browser) => {
-      compilation.emitAsset(join(browser, "manifest.json"), this.manifests.get(browser)!);
+      const manifest = this.manifests.get(browser) as sources.Source;
+      compilation.emitAsset(join(browser, 'manifest.json'), manifest, {
+        javascriptModule: false,
+        contentType: 'application/json',
+      });
+      for (const [name, asset] of Object.entries(assets)) {
+        // move the assets to their final browser-relative locations
+        const assetDetails = compilation.getAsset(name) as Readonly<Asset>;
+        compilation.emitAsset(join(browser, name), asset, assetDetails.info);
+        assetDeletions.add(name);
+      }
     });
+    // delete the assets after we've zipped them all
+    assetDeletions.forEach((assetName) => compilation.deleteAsset(assetName));
   }
 
-  manifesto(compilation: Compilation) {
-    // Step 1: Load the base manifest
-    const basePath = join(compilation.options.context!, `manifest/v${this.options.manifest_version}/_base.json`);
-    let baseManifest: Manifest;
-    try {
-      baseManifest = JSON.parse(readFileSync(basePath, 'utf-8'));
-    } catch (error) {
-      throw new Error(`Failed to load base manifest at ${basePath}: ${error}`);
-    }
+  private prepareManifests(compilation: Compilation): void {
+    const context = compilation.options.context as string;
+    const manifestPath = join(
+      context,
+      `manifest/v${this.options.manifest_version}`,
+    );
+    // Load the base manifest
+    const basePath = join(manifestPath, `_base.json`);
+    const baseManifest: Manifest = require(basePath);
 
-    // Step 2: Merge browser-specific overrides
+    const description = this.options.description
+      ? `${baseManifest.description} – ${this.options.description}`
+      : baseManifest.description;
+    const { version } = this.options;
+
     this.options.browsers.forEach((browser) => {
-      const browserPath = join(compilation.options.context!, `manifest/v${this.options.manifest_version}/${browser}.json`);
-      let browserManifest = { ...baseManifest }; // Shallow copy of the base manifest
-      browserManifest.version = this.options.version;
-      browserManifest.description = this.options.description ? `${baseManifest.description} – ${this.options.description}` : baseManifest.description;
+      let browserManifest: Manifest = { ...baseManifest, version, description };
 
-      let browserOverridesFile: string | undefined;
       try {
-        browserOverridesFile = readFileSync(browserPath, 'utf-8');
+        const browserManifestPath = join(manifestPath, `${browser}.json`);
+        // merge browser-specific overrides into the base manifest
+        browserManifest = {
+          ...browserManifest,
+          ...require(browserManifestPath),
+        };
       } catch {
-        // ignore if the file didn't exist
-      }
-      if (browserOverridesFile) {
-        const browserOverrides = JSON.parse(readFileSync(browserPath, 'utf-8'));
-        browserManifest = { ...browserManifest, ...browserOverrides };
+        // ignore if the file doesn't exist, as some browsers might not need overrides
       }
 
-      // Step 3: Deep merge `web_accessible_resources`
-      const resources = ['scripts/inpage.js.map', 'scripts/contentscript.js.map'];
-      if (compilation.options.devtool === 'source-map') {
-        // TODO: merge with anything that might already be in web_accessible_resources
-        if (this.options.manifest_version === 3) {
-          browserManifest.web_accessible_resources = [
-            {
-              resources: resources,
+      // merge provided `web_accessible_resources`
+      const resources = this.options.web_accessible_resources;
+      if (resources && resources.length > 0) {
+        if (isManifestV3(browserManifest)) {
+          browserManifest.web_accessible_resources =
+            browserManifest.web_accessible_resources || [];
+          const war = browserManifest.web_accessible_resources.find(
+            (resource) => resource.matches.includes('<all_urls>'),
+          );
+          if (war) {
+            // merge the resources into the existing <all_urls> resource, ensure uniqueness using `Set`
+            war.resources = [...new Set([...war.resources, ...resources])];
+          } else {
+            // add a new <all_urls> resource
+            browserManifest.web_accessible_resources.push({
               matches: ['<all_urls>'],
-            },
-          ];
+              resources,
+            });
+          }
         } else {
-          browserManifest.web_accessible_resources = resources;
+          browserManifest.web_accessible_resources = [
+            ...resources,
+            ...(browserManifest.web_accessible_resources || []),
+          ];
         }
       }
 
-      // Step 4: Add the manifest file to the `this.manifest` Map
+      // Add the manifest file to the assets
       const source = new RawSource(JSON.stringify(browserManifest, null, 2));
       this.manifests.set(browser, source);
     });
   }
 
-  private hookIntoAssetPipeline(compilation: Compilation) {
-    // TODO: generate the manifest file for each browser at some point
-    this.manifesto(compilation);
-
+  private hookIntoAssetPipeline(compilation: Compilation): void {
+    // prepare manifests early so we can catch errors early instead of waiting
+    // until the end of the compilation.
+    this.prepareManifests(compilation);
 
     const tapOptions = {
       name: NAME,
       stage: Infinity,
     };
     if (this.options.zip) {
-      const options: ManifestPluginOptions<true> = this.options;
+      const options = this.options as ManifestPluginOptions<true>;
       compilation.hooks.processAssets.tapPromise(
         tapOptions,
         async (assets: Assets) => this.zipAssets(compilation, assets, options),
       );
     } else {
-      const options: ManifestPluginOptions<false> = this.options;
+      const options = this.options as ManifestPluginOptions<false>;
       compilation.hooks.processAssets.tap(tapOptions, (assets: Assets) => {
         this.moveAssets(compilation, assets, options);
       });

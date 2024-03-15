@@ -80,7 +80,7 @@ function getBuildIcon({ buildType }) {
     BUILD_TYPES_TO_SVG_LOGO_PATH[buildType] ||
     BUILD_TYPES_TO_SVG_LOGO_PATH.main;
   // encode as base64 as its more space-efficient for most SVGs than a data uri
-  return `data:image/svg+xml;base64,${readFileSync(svgLogoPath, "base64")}`;
+  return `data:image/svg+xml;base64,${readFileSync(svgLogoPath, 'base64')}`;
 }
 
 /**
@@ -183,6 +183,7 @@ function getPhishingWarningPageUrl({ variables, testing }) {
     phishingWarningPageUrl = testing
       ? 'http://localhost:9999/'
       : `https://metamask.github.io/phishing-warning/v${
+          // eslint-disable-next-line node/global-require
           require('@metamask/phishing-warning/package.json').version
         }/`;
   }

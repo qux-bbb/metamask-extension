@@ -20,7 +20,8 @@ export const schema: JSONSchema7 = {
       uniqueItems: true,
     },
     version: {
-      description: 'One to four dot-separated integers identifying the version of this extension.',
+      description:
+        'One to four dot-separated integers identifying the version of this extension.',
       type: 'string',
     },
     description: {
@@ -29,9 +30,18 @@ export const schema: JSONSchema7 = {
       maxLength: 132,
     },
     manifest_version: {
-      description: 'An integer specifying the version of the manifest file format your package requires.',
+      description:
+        'An integer specifying the version of the manifest file format your package requires.',
       type: 'number',
       enum: [2, 3],
+    },
+    web_accessible_resources: {
+      description:
+        'An array of strings specifying the paths of additional web-accessible resources.',
+      type: 'array',
+      items: {
+        type: 'string',
+      },
     },
     zip: {
       description: 'Whether or not to zip the individual browser builds.',

@@ -140,7 +140,7 @@ type SchemaOptions = { keepDefaultedPropertiesOptional: true };
 export type SwcLoaderOptions = FromSchema<typeof schema, SchemaOptions>;
 
 type Context = LoaderContext<SwcLoaderOptions>;
-export default function swcLoader(this: Context, content: string, map: string) {
+export default function swcLoader(this: Context, src: string, srcMap: string) {
   const pluginOptions = this.getOptions();
   validate(schema, pluginOptions, { name: 'swcLoader' });
 
@@ -148,17 +148,24 @@ export default function swcLoader(this: Context, content: string, map: string) {
     ...pluginOptions,
     envName: this.mode,
     filename: this.resourcePath,
-    inputSourceMap: map,
+    inputSourceMap: srcMap,
     sourceFileName: this.resourcePath,
     sourceMaps: this.sourceMap,
     swcrc: false,
     // TODO: remove this `as Options` cast when swc's `Options` type is fixed
-    // see: https://github.com/swc-project/swc/issues/8494
+    // and published see: https://github.com/swc-project/swc/issues/8751
   } as Options;
 
   const cb = this.async();
-  transform(content, options).then(({ code, map }) => cb(null, code, map), cb);
+  transform(src, options).then(({ code, map }) => cb(null, code, map), cb);
 }
+
+export type SwcConfig = {
+  args: Args;
+  safeVariables: Record<string, string>;
+  browsersListQuery: string;
+  isDevelopment: boolean;
+};
 
 /**
  * Gets the Speedy Web Compiler (SWC) loader for the given syntax.
@@ -171,12 +178,7 @@ export default function swcLoader(this: Context, content: string, map: string) {
 export function getSwcLoader(
   syntax: 'typescript' | 'ecmascript',
   enableJsx: boolean,
-  swcConfig: {
-    args: Args;
-    safeVariables: Record<string, string>;
-    browsersListQuery: string;
-    isDevelopment: boolean;
-  },
+  swcConfig: SwcConfig,
 ) {
   return {
     loader: __filename,

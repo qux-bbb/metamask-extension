@@ -41,8 +41,9 @@ function codeFenceLoader(this: Context, content: string, map: string) {
 
 export default codeFenceLoader;
 
+export type Loader = RuleSetRule & { options: CodeFenceLoaderOptions };
 
-export function getCodeFenceLoader(features: FeatureLabels): RuleSetRule & { options: CodeFenceLoaderOptions } {
+export function getCodeFenceLoader(features: FeatureLabels): Loader {
   return {
     loader: __filename,
     options: { features },

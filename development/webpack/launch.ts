@@ -18,18 +18,18 @@ import { spawn, type StdioOptions } from 'node:child_process';
 import parser from 'yargs-parser';
 import type { Child, PTY, Stdio, StdName } from './types';
 
-const argv = process.argv.slice(2);
+const rawArgv = process.argv.slice(2);
 
 const alias = { cache: 'c', help: 'h', watch: 'h' };
 type Args = { [x in keyof typeof alias]?: boolean };
-const args = parser(argv, { alias, boolean: Object.keys(alias) }) as Args;
+const args = parser(rawArgv, { alias, boolean: Object.keys(alias) }) as Args;
 
 if (args.cache === false || args.help === true || args.watch === true) {
   // there are no time savings to running the build in a child process if the
   // cache is disabled, we need to output "help", or we're in watch mode.
   import(join(__dirname, 'build.ts')).then(({ build }) => build());
 } else {
-  fork(process, join(__dirname, 'fork.ts'), argv);
+  fork(process, join(__dirname, 'fork.mts'), rawArgv);
 }
 
 /**
@@ -94,7 +94,10 @@ function createOutputStreams(process: NodeJS.Process) {
      */
     connectToChild(this: Child, child = this) {
       // hook up the child's stdio to the parent's & unref so we can exit later
-      outs.forEach((stream) => (stream.listen(child), stream.unref(child)));
+      outs.forEach((stream) => {
+        stream.listen(child);
+        stream.unref(child);
+      });
 
       listenForShutdownSignal(process, child);
 
@@ -124,10 +127,10 @@ function createOutputStreams(process: NodeJS.Process) {
 function createNonTTYStream(stream: NodeJS.WriteStream, name: StdName): Stdio {
   return {
     destroy: () => undefined,
-    listen: (child: Child) => void child[name]!.pipe(stream),
+    listen: (child: Child) => void child[name].pipe(stream),
     pty: 'pipe', // let Node create the Pipes
     resize: () => undefined,
-    unref: (child: Child) => void child[name]!.unref(),
+    unref: (child: Child) => void child[name].unref(),
   };
 }
 
@@ -143,11 +146,17 @@ function createTTYStream(stream: NodeJS.WriteStream): Stdio {
   const pty: PTY = require('node-pty').open(options);
 
   return {
-    destroy: () => void (pty.master.destroy(), pty.slave.destroy()),
-    listen: (child: Child) => void pty.master.pipe(stream),
+    destroy: () => {
+      pty.master.destroy();
+      pty.slave.destroy();
+    },
+    listen: (_child: Child) => void pty.master.pipe(stream),
     pty: pty.slave,
     resize: () => pty.resize(stream.columns, stream.rows),
-    unref: (child: Child) => void (pty.master.unref(), pty.slave.unref()),
+    unref: (_child: Child) => {
+      pty.master.unref();
+      pty.slave.unref();
+    },
   };
 }
 

@@ -1,8 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse, join, relative, sep } from 'node:path';
 import type zlib from 'node:zlib';
-import { merge } from 'lodash';
-import { version } from 'webpack';
 import type { Chunk, EntryObject, Stats, Configuration } from 'webpack';
 import type TerserPluginType from 'terser-webpack-plugin';
 
@@ -197,7 +195,7 @@ function assertValidEntryFileName(filename: string, appRoot: string) {
  * @throws Throws an error if the current branch is detached or has no commits.
  * May also throw if the Git repository is malformed (or not found).
  */
-export function getLastCommitHash(gitDir = join(__dirname, '../../../.git')){
+export function getLastCommitHash(gitDir = join(__dirname, '../../../.git')) {
   // read .git/HEAD to get the current branch/commit
   const ref = readFileSync(join(gitDir, 'HEAD'), 'utf8').trim();
 
@@ -208,7 +206,7 @@ export function getLastCommitHash(gitDir = join(__dirname, '../../../.git')){
     : // HEAD is detached; so use the commit hash directly
       ref;
 
-   return oid;
+  return oid;
 }
 
 /**
@@ -228,10 +226,12 @@ export function getLastCommitHash(gitDir = join(__dirname, '../../../.git')){
  * @throws Throws an error if the current branch is detached or has no commits.
  * May also throw if the Git repository is malformed (or not found).
  */
-export function getLastCommitTimestamp(gitDir = join(__dirname, '../../../.git')) {
+export function getLastCommitTimestamp(
+  gitDir = join(__dirname, '../../../.git'),
+) {
   // Note: this function is synchronous because it's faster this way
 
-  // use `unzipSync` from zlib since git uses zlib-wrapped DEFLATE
+  // use `unzipSync` from zlib since git uses zlib-wrapped DEFLATE.
   // loaded in this way to avoid requiring it when this function isn't used.
   const { unzipSync } = require('node:zlib') as typeof zlib;
 
@@ -247,12 +247,22 @@ export function getLastCommitTimestamp(gitDir = join(__dirname, '../../../.git')
   const firstNull = decompressed.indexOf(0);
   const commit = new TextDecoder().decode(decompressed.subarray(firstNull + 1));
   // commits are strictly formatted; use regex to extract the time fields
-  const [, timestamp, offset] = commit.match(/^author .* <.*> (.*) (.*)$/mu)!;
+  const [, timestamp, offset] = extractAuthorship(commit);
   // convert git timestamp from seconds to milliseconds
   const msSinceLocalEpoch = parseInt(timestamp, 10) * 1000;
   const msTimezoneOffset = parseInt(offset, 10) * 60000;
 
   return msSinceLocalEpoch - msTimezoneOffset;
+}
+
+/**
+ * Extracts the authorship information from a git commit object.
+ *
+ * @param commit - A well-formed git commit
+ * @returns [match, timestamp, offset]
+ */
+function extractAuthorship(commit: string): string[] {
+  return commit.match(/^author .* <.*> (.*) (.*)$/mu) as string[];
 }
 
 /**
@@ -292,7 +302,7 @@ export const { colors, toGreen, toOrange, toPurple } = ((depth, esc) => {
   };
 })((process.stderr.getColorDepth?.() as 1 | 4 | 8 | 24) || 1, '\u001b');
 
-export type LogStatsConfig = Pick<Configuration, "mode" | "stats">;
+export type LogStatsConfig = Pick<Configuration, 'mode' | 'stats'>;
 
 /**
  * Logs a summary of build information to `process.stderr`.
@@ -324,6 +334,7 @@ export function logStats(config: LogStatsConfig, err?: Error, stats?: Stats) {
     const { name } = stats.compilation;
     const status = toGreen('successfully');
     const time = `${stats.endTime - stats.startTime} ms`;
+    const { version } = require('webpack');
     console.error(`${name} (webpack ${version}) compiled ${status} in ${time}`);
   }
 }

@@ -312,7 +312,7 @@
     "@sentry/integrations": "^7.53.0",
     "@sentry/types": "^7.53.0",
     "@sentry/utils": "^7.53.0",
-    "@swc/core": "^1.4.6",
+    "@swc/core": "^1.4.8",
     "@trezor/connect-web": "9.0.11",
     "@zxing/browser": "^0.1.4",
     "@zxing/library": "0.20.0",

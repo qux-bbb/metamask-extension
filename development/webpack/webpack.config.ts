@@ -42,8 +42,9 @@ if (args['dry-run']) {
 }
 
 // #region temporary short circuit for unsupported build configurations
-if (args.lavamoat)
+if (args.lavamoat) {
   throw new Error("The webpack build doesn't support LavaMoat yet. So sorry.");
+}
 // #endregion temporary short circuit for unsupported build configurations
 
 const context = join(__dirname, '../../app');
@@ -57,6 +58,10 @@ const browsersListPath = join(context, '../.browserslistrc');
 // read .browserslist now to stop it from searching for the file over and over
 const browsersListQuery = readFileSync(browsersListPath, 'utf8');
 const { variables, safeVariables } = getVariables(args, buildTypes);
+const webAccessibleResources =
+  args.devtool === 'source-map'
+    ? ['scripts/inpage.js.map', 'scripts/contentscript.js.map']
+    : [];
 
 // #region cache
 const cache = args.cache
@@ -97,18 +102,18 @@ const plugins: WebpackPluginInstance[] = [
     integrity: 'auto',
   }),
   new ManifestPlugin({
+    web_accessible_resources: webAccessibleResources,
     manifest_version: MANIFEST_VERSION,
     description: isDevelopment
-    ? `${args.env} build from git id: ${getLastCommitHash().substring(
-        0,
-        8,
-      )}`
-    : null,
+      ? `${args.env} build from git id: ${getLastCommitHash().substring(0, 8)}`
+      : null,
     version: variables.get('METAMASK_VERSION') as string,
     browsers: args.browser,
     zip: args.zip,
     zipOptions: {
-      outFilePath: `../../builds/metamask-[browser]-${variables.get("METAMASK_VERSION")}.zip`, // relative to output.path
+      outFilePath: `../../builds/metamask-[browser]-${variables.get(
+        'METAMASK_VERSION',
+      )}.zip`, // relative to output.path
       mtime: getLastCommitTimestamp(),
       excludeExtensions: ['.map'],
       // `level: 9` is the highest; it may increase build time by ~5% over level 1
@@ -327,7 +332,7 @@ const config = {
     // platform is responsible for loading them and splitting these files
     // would require updating the manifest to include the other chunks.
     runtimeChunk: {
-      name: (entry: Chunk) => (canBeChunked(entry) ? `runtime` : false),
+      name: (chunk: Chunk) => (canBeChunked(chunk) ? `runtime` : false),
     },
     splitChunks: {
       // Impose a 4MB JS file size limit due to Firefox limitations

@@ -6456,26 +6456,6 @@
         "postcss": true
       }
     },
-    "postcss-urlrewrite": {
-      "builtin": {
-        "util.isArray": true,
-        "util.isRegExp": true
-      },
-      "packages": {
-        "postcss-urlrewrite>postcss-helpers": true
-      }
-    },
-    "postcss-urlrewrite>postcss-helpers": {
-      "packages": {
-        "postcss-urlrewrite>postcss-helpers>urijs": true
-      }
-    },
-    "postcss-urlrewrite>postcss-helpers>urijs": {
-      "globals": {
-        "define": true,
-        "location": true
-      }
-    },
     "postcss>picocolors": {
       "builtin": {
         "tty.isatty": true

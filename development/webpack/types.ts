@@ -16,8 +16,8 @@ export interface PTY extends IPty {
  * method, which is missing from the standard Node.js types.
  */
 export interface Child extends ChildProcess {
-  stderr: (Readable & { unref: () => Readable }) | null;
-  stdout: (Readable & { unref: () => Readable }) | null;
+  stderr: Readable & { unref: () => Readable };
+  stdout: Readable & { unref: () => Readable };
 }
 
 export type StdName = 'stdout' | 'stderr';

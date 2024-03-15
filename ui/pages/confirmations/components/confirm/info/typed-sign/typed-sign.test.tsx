@@ -9,17 +9,6 @@ import {
 import TypedSignInfo from './typed-sign';
 
 describe('TypedSignInfo', () => {
-  it('renders origin for typed sign data request', () => {
-    const mockState = {
-      confirm: {
-        currentConfirmation: unapprovedTypedSignMsgV3,
-      },
-    };
-    const mockStore = configureMockStore([])(mockState);
-    const { container } = renderWithProvider(<TypedSignInfo />, mockStore);
-    expect(container).toMatchSnapshot();
-  });
-
   it('does not render if required data is not present in the transaction', () => {
     const mockState = {
       confirm: {

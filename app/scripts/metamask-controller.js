@@ -1122,6 +1122,7 @@ export default class MetamaskController extends EventEmitter {
         allowedActions: [
           'NetworkController:getNetworkClientById',
           'NetworkController:getState',
+          'NetworkController:getSelectedNetworkClient',
           'PermissionController:hasPermissions',
           'PermissionController:getSubjectNames',
         ],
@@ -4766,23 +4767,24 @@ export default class MetamaskController extends EventEmitter {
     // append selectedNetworkClientId to each request
     engine.push(createSelectedNetworkMiddleware(this.controllerMessenger));
 
-    let proxyClient;
-    if (
-      this.preferencesController.getUseRequestQueue() &&
-      this.selectedNetworkController.state.domains[origin]
-    ) {
-      proxyClient =
-        this.selectedNetworkController.getProviderAndBlockTracker(origin);
-    } else {
-      // if useRequestQueue is false we want to use the globally selected network provider/blockTracker
-      // since this means the per domain network feature is disabled
+    const proxyClient =
+      this.selectedNetworkController.getProviderAndBlockTracker(origin);
+    // if (
+    //   this.preferencesController.getUseRequestQueue() &&
+    //   this.selectedNetworkController.state.domains[origin]
+    // ) {
+    //   proxyClient =
+    //     this.selectedNetworkController.getProviderAndBlockTracker(origin);
+    // } else {
+    //   // if useRequestQueue is false we want to use the globally selected network provider/blockTracker
+    //   // since this means the per domain network feature is disabled
 
-      // if the origin is not in the selectedNetworkController's `domains` state,
-      // this means that origin does not have permissions (is not connected to the wallet)
-      // and will therefore not have its own selected network even if useRequestQueue is true
-      // and so in this case too we want to use the globally selected network provider/blockTracker
-      proxyClient = this.networkController.getProviderAndBlockTracker();
-    }
+    //   // if the origin is not in the selectedNetworkController's `domains` state,
+    //   // this means that origin does not have permissions (is not connected to the wallet)
+    //   // and will therefore not have its own selected network even if useRequestQueue is true
+    //   // and so in this case too we want to use the globally selected network provider/blockTracker
+    //   proxyClient = this.networkController.getProviderAndBlockTracker();
+    // }
 
     const requestQueueMiddleware = createQueuedRequestMiddleware({
       messenger: this.controllerMessenger,

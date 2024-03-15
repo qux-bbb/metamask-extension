@@ -1728,6 +1728,11 @@ export default class MetamaskController extends EventEmitter {
         getTokenRatesState: () => this.tokenRatesController.state,
         getCurrentChainId: () =>
           this.networkController.state.providerConfig.chainId,
+        getLayer1GasFee: this.txController.getLayer1GasFee.bind(
+          this.txController,
+        ),
+        getNetworkClientId: () =>
+          this.networkController.state.selectedNetworkClientId,
         getEIP1559GasFeeEstimates:
           this.gasFeeController.fetchGasFeeEstimates.bind(
             this.gasFeeController,
@@ -3153,6 +3158,7 @@ export default class MetamaskController extends EventEmitter {
         txController.updatePreviousGasParams.bind(txController),
       abortTransactionSigning:
         txController.abortTransactionSigning.bind(txController),
+      getLayer1GasFee: txController.getLayer1GasFee.bind(txController),
 
       // decryptMessageController
       decryptMessage: this.decryptMessageController.decryptMessage.bind(
@@ -5405,58 +5411,63 @@ export default class MetamaskController extends EventEmitter {
   _addTransactionControllerListeners() {
     const transactionMetricsRequest = this.getTransactionMetricsRequest();
 
-    this.txController.hub.on(
-      'post-transaction-balance-updated',
+    this.controllerMessenger.subscribe(
+      'TransactionController:postTransactionBalanceUpdated',
       handlePostTransactionBalanceUpdate.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on('unapprovedTransaction', (transactionMeta) =>
-      handleTransactionAdded(transactionMetricsRequest, { transactionMeta }),
+    this.controllerMessenger.subscribe(
+      'TransactionController:unapprovedTransactionAdded',
+      (transactionMeta) =>
+        handleTransactionAdded(transactionMetricsRequest, { transactionMeta }),
     );
 
-    this.txController.hub.on(
-      'transaction-approved',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionApproved',
       handleTransactionApproved.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on(
-      'transaction-dropped',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionDropped',
       handleTransactionDropped.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on(
-      'transaction-confirmed',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionConfirmed',
       handleTransactionConfirmed.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on(
-      'transaction-failed',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionFailed',
       handleTransactionFailed.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on('transaction-new-swap', ({ transactionMeta }) => {
-      this.swapsController.setTradeTxId(transactionMeta.id);
-    });
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionNewSwap',
+      ({ transactionMeta }) => {
+        this.swapsController.setTradeTxId(transactionMeta.id);
+      },
+    );
 
-    this.txController.hub.on(
-      'transaction-new-swap-approval',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionNewSwapApproval',
       ({ transactionMeta }) => {
         this.swapsController.setApproveTxId(transactionMeta.id);
       },
     );
 
-    this.txController.hub.on(
-      'transaction-rejected',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionRejected',
       handleTransactionRejected.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on(
-      'transaction-submitted',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionSubmitted',
       handleTransactionSubmitted.bind(null, transactionMetricsRequest),
     );
 
-    this.txController.hub.on(
-      'transaction-status-update',
+    this.controllerMessenger.subscribe(
+      'TransactionController:transactionStatusUpdated',
       ({ transactionMeta }) => {
         this._onFinishedTransaction(transactionMeta);
       },
